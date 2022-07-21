@@ -2,23 +2,40 @@ package main
 
 import (
 	"log"
+	"sync"
 
 	"github.com/google/uuid"
 )
-
-type Cache struct{}
 
 type Worker struct {
 	id         string
 	n          int
 	result     int
 	workerPool *WorkerPool
-	cache      *Cache
+	cache      *map[int]int
 }
 
 func (w *Worker) launch() {
 
-	w.result = Fibonacci(w.n)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer func() {
+			wg.Done()
+		}()
+		result := Fibonacci(w.n, *w.cache, &w.workerPool.mutex)
+		w.result = result
+	}()
+
+	wg.Wait()
+
+	go func() {
+		w.workerPool.mutex.Lock()
+		w.workerPool.cache[w.n] = w.result
+		w.workerPool.mutex.Unlock()
+	}()
+
 	w.workerPool.quitChan <- w.id
 	log.Printf("Fib(%d) Worker Result %d", w.n, w.result)
 
@@ -26,19 +43,21 @@ func (w *Worker) launch() {
 
 type WorkerPool struct {
 	maxWorkers int
-	cache      Cache
+	cache      map[int]int
 	workers    map[string]*Worker
 	quitChan   chan string
 	jobQueue   chan int
+	mutex      sync.RWMutex
 }
 
 func NewWorkerPool(maxWorkers int) *WorkerPool {
 	return &WorkerPool{
 		maxWorkers: maxWorkers,
-		cache:      Cache{},
 		workers:    make(map[string]*Worker),
 		quitChan:   make(chan string),
 		jobQueue:   make(chan int),
+		cache:      make(map[int]int),
+		mutex:      sync.RWMutex{},
 	}
 }
 
@@ -80,10 +99,20 @@ func (wp *WorkerPool) StartListen() {
 	}
 }
 
-func Fibonacci(n int) int {
+func Fibonacci(n int, cache map[int]int, mutex *sync.RWMutex) int {
+
+	mutex.RLock()
+	res, exists := cache[n]
+	mutex.RUnlock()
+
+	if exists {
+		return res
+	}
+
 	if n <= 1 {
 		return n
 	}
 
-	return Fibonacci(n-1) + Fibonacci(n-2)
+	return Fibonacci(n-1, cache, mutex) + Fibonacci(n-2, cache, mutex)
+
 }
