@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -20,6 +21,9 @@ func (w *Worker) launch() {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
+
+	t := time.Now()
+
 	go func() {
 		defer func() {
 			wg.Done()
@@ -30,6 +34,8 @@ func (w *Worker) launch() {
 
 	wg.Wait()
 
+	elapsedTime := time.Since(t)
+
 	go func() {
 		w.workerPool.mutex.Lock()
 		w.workerPool.cache[w.n] = w.result
@@ -37,7 +43,7 @@ func (w *Worker) launch() {
 	}()
 
 	w.workerPool.quitChan <- w.id
-	log.Printf("Fib(%d) Worker Result %d", w.n, w.result)
+	log.Printf("[%v] Computing Fib(%d) :::: Time %v :::: Result %d ::::", w.id, w.n, elapsedTime, w.result)
 
 }
 
@@ -69,8 +75,7 @@ func (wp *WorkerPool) startNewWorker(n int) {
 		return
 	}
 
-	log.Println("Number of Working Workers", len(wp.workers))
-	log.Printf("Starting a Worker to compute Fib(%d)", n)
+	log.Printf("[main] Starting a Worker to compute Fib(%d)", n)
 
 	worker := Worker{
 		id:         uuid.New().String(),
@@ -82,6 +87,7 @@ func (wp *WorkerPool) startNewWorker(n int) {
 	wp.workers[worker.id] = &worker
 
 	go worker.launch()
+
 }
 
 func (wp *WorkerPool) StartListen() {
@@ -92,7 +98,7 @@ func (wp *WorkerPool) StartListen() {
 			wp.startNewWorker(n)
 
 		case id := <-wp.quitChan:
-			log.Printf("Deleting Worker with ID %v computing Fib(%d)", id, wp.workers[id].n)
+			log.Printf("[main] Deleting Worker with ID %v computing Fib(%d)", id, wp.workers[id].n)
 			delete(wp.workers, id)
 
 		}

@@ -15,6 +15,8 @@ func main() {
 
 	go workerPool.StartListen()
 
+	log.Println("[main] Worker Pool started to listen. Please, send an HTTP request to localhost:8000/number")
+
 	router.HandleFunc("/{n}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		n, err := vars["n"]
