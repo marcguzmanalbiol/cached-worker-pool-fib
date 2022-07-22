@@ -16,7 +16,12 @@ func main() {
 
 	go workerPool.StartListen()
 
-	log.Println("[main] Worker Pool started to listen. Please, send an HTTP request to localhost:8000/number")
+	log.Println(
+		`
+		[main] Worker Pool started to listen. 
+		Please, send an HTTP request to localhost:8000/number
+		`,
+	)
 
 	router.HandleFunc("/{n}", newJob)
 

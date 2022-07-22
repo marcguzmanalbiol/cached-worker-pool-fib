@@ -43,7 +43,10 @@ func (w *Worker) launch() {
 	}()
 
 	w.workerPool.quitChan <- w.id
-	log.Printf("[%v] Computing Fib(%d) :::: Time %v :::: Result %d ::::", w.id, w.n, elapsedTime, w.result)
+	log.Printf(
+		"[%v] Computing Fib(%d) :::: Time %v :::: Result %d ::::",
+		w.id, w.n, elapsedTime, w.result,
+	)
 
 }
 
@@ -98,7 +101,12 @@ func (wp *WorkerPool) StartListen() {
 			wp.startNewWorker(n)
 
 		case id := <-wp.quitChan:
-			log.Printf("[main] Deleting Worker with ID %v computing Fib(%d)", id, wp.workers[id].n)
+
+			log.Printf(
+				"[main] Deleting Worker with ID %v computing Fib(%d)",
+				id, wp.workers[id].n,
+			)
+
 			delete(wp.workers, id)
 
 		}
